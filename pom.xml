@@ -45,12 +45,20 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+<!--        引入Swagger UI-->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi2-spring-boot-starter</artifactId>
             <version>4.4.0</version>
         </dependency>
 
+
+        <!-- 腾讯云 cos 服务 -->
+        <dependency>
+            <groupId>com.qcloud</groupId>
+            <artifactId>cos_api</artifactId>
+            <version>5.6.227</version>
+        </dependency>
 
         <dependency>
             <groupId>com.mysql</groupId>

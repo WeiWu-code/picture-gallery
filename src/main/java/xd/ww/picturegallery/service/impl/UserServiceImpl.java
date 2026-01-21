@@ -1,7 +1,6 @@
 package xd.ww.picturegallery.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +20,6 @@ import xd.ww.picturegallery.model.vo.UserVO;
 import xd.ww.picturegallery.service.UserService;
 import xd.ww.picturegallery.utils.SqlUtils;
 
-import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;

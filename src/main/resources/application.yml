@@ -4,8 +4,9 @@ server:
     context-path: /api
 
 spring:
-  application:
-    name: picture-gallery
+  servlet:
+    multipart:
+      max-file-size: 10MB
 
   # 数据库配置
   datasource:
@@ -13,6 +14,8 @@ spring:
     url: jdbc:mysql://localhost:3306/picture_gallery
     username: root
     password: 123456
+  profiles:
+    active: local
 
 mybatis-plus:
   configuration:

@@ -36,6 +36,11 @@ public class User implements Serializable {
     private String userName;
 
     /**
+     * 编辑时间
+     */
+    private String editTime;
+
+    /**
      * 用户头像
      */
     private String userAvatar;
