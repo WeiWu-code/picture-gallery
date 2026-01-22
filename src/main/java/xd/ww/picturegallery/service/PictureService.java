@@ -3,8 +3,9 @@ package xd.ww.picturegallery.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import org.springframework.web.multipart.MultipartFile;
 import xd.ww.picturegallery.model.dto.picture.PictureQueryRequest;
+import xd.ww.picturegallery.model.dto.picture.PictureReviewRequest;
+import xd.ww.picturegallery.model.dto.picture.PictureUploadByBatchRequest;
 import xd.ww.picturegallery.model.dto.picture.PictureUploadRequest;
 import xd.ww.picturegallery.model.entity.Picture;
 import xd.ww.picturegallery.model.entity.User;
@@ -17,12 +18,12 @@ public interface PictureService extends IService<Picture> {
     /**
      * 上传图片
      *
-     * @param multipartFile 文件内容
+     * @param inputSource 文件内容
      * @param pictureUploadRequest 待上传的请求
      * @param loginUser 当前登录用户
      * @return 封装的Picture对象
      */
-    PictureVO uploadPicture(MultipartFile multipartFile,
+    PictureVO uploadPicture(Object inputSource,
                             PictureUploadRequest pictureUploadRequest,
                             User loginUser);
 
@@ -58,4 +59,34 @@ public interface PictureService extends IService<Picture> {
      * @param picture 待检验的图片
      */
     void validPicture(Picture picture);
+
+
+    /**
+     * 图片审核
+     *
+     * @param pictureReviewRequest 审核请求
+     * @param loginUser 当前登录用户
+     */
+    void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
+
+    /**
+     * 填充Picture的审核状态
+     * @param picture 待审核图片
+     * @param loginUser 当前登录用户
+     */
+    void fillReviewParams(Picture picture, User loginUser);
+
+
+    /**
+     * 批量抓取和创建图片
+     *
+     * @param pictureUploadByBatchRequest 批量抓取图片请求
+     * @param loginUser 当前登录用户
+     * @return 成功创建的图片数
+     */
+    int uploadPictureByBatch(
+            PictureUploadByBatchRequest pictureUploadByBatchRequest,
+            User loginUser
+    );
+
 }
