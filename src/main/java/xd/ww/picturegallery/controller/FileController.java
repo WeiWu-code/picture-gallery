@@ -32,8 +32,8 @@ public class FileController {
     /**
      * 测试文件上传
      *
-     * @param multipartFile
-     * @return
+     * @param multipartFile 文件part
+     * @return 上传成功与否
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/test/upload")
