@@ -2,11 +2,21 @@ server:
   port: 9020
   servlet:
     context-path: /api
+    session:
+      cookie:
+        max-age: 3600
+
 
 spring:
   servlet:
     multipart:
       max-file-size: 10MB
+  # Redis 配置
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    timeout: 5000
 
   # 数据库配置
   datasource:
@@ -16,6 +26,11 @@ spring:
     password: 123456
   profiles:
     active: local
+  session:
+    store-type: redis
+    timeout: 3600
+
+
 
 mybatis-plus:
   configuration:

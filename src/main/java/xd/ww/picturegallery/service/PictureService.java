@@ -3,6 +3,7 @@ package xd.ww.picturegallery.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.scheduling.annotation.Async;
 import xd.ww.picturegallery.model.dto.picture.PictureQueryRequest;
 import xd.ww.picturegallery.model.dto.picture.PictureReviewRequest;
 import xd.ww.picturegallery.model.dto.picture.PictureUploadByBatchRequest;
@@ -89,4 +90,10 @@ public interface PictureService extends IService<Picture> {
             User loginUser
     );
 
+    /**
+     * 清理COS中不需要的图片，支持异步
+     * @param oldPicture 待清理的图片
+     */
+    @Async
+    void clearPictureFile(Picture oldPicture);
 }

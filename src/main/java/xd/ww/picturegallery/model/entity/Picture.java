@@ -86,6 +86,12 @@ public class Picture implements Serializable {
     private Date updateTime;
 
     /**
+     * 缩略图 url
+     */
+    private String thumbnailUrl;
+
+
+    /**
      * 状态：0-待审核; 1-通过; 2-拒绝
      */
     private Integer reviewStatus;

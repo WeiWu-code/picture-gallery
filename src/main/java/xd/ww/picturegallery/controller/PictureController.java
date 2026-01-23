@@ -14,10 +14,12 @@ import xd.ww.picturegallery.constant.UserConstant;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
+import xd.ww.picturegallery.manager.MultiCacheManager;
 import xd.ww.picturegallery.model.dto.picture.*;
 import xd.ww.picturegallery.model.entity.Picture;
 import xd.ww.picturegallery.model.entity.PictureTagCategory;
 import xd.ww.picturegallery.model.entity.User;
+import xd.ww.picturegallery.model.enums.PictureReviewStatusEnum;
 import xd.ww.picturegallery.model.vo.PictureVO;
 import xd.ww.picturegallery.service.PictureService;
 import xd.ww.picturegallery.service.UserService;
@@ -40,6 +42,10 @@ public class PictureController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private MultiCacheManager multiCacheManager;
+
 
     /**
      * 上传图片（可重新上传）
@@ -257,5 +263,26 @@ public class PictureController {
         pictureService.doPictureReview(pictureReviewRequest, loginUser);
         return ResultUtils.success(true);
     }
+
+    /**
+     * 使用redis分布式缓存
+     * @param pictureQueryRequest 图片查询请求
+     * @param request HttpServletRequest
+     * @return Page<PictureVO>
+     */
+    @PostMapping("/list/page/vo/cache")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                                      HttpServletRequest request) {
+        long size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 普通用户默认只能查看已过审的数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        Page<PictureVO> pictureVOPage = multiCacheManager.getPictureVOPageByCache(pictureQueryRequest, request);
+
+        // 返回结果
+        return ResultUtils.success(pictureVOPage);
+    }
+
 
 }
