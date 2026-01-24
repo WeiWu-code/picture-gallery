@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.scheduling.annotation.Async;
-import xd.ww.picturegallery.model.dto.picture.PictureQueryRequest;
-import xd.ww.picturegallery.model.dto.picture.PictureReviewRequest;
-import xd.ww.picturegallery.model.dto.picture.PictureUploadByBatchRequest;
-import xd.ww.picturegallery.model.dto.picture.PictureUploadRequest;
+import xd.ww.picturegallery.model.dto.picture.*;
 import xd.ww.picturegallery.model.entity.Picture;
 import xd.ww.picturegallery.model.entity.User;
 import xd.ww.picturegallery.model.vo.PictureVO;
@@ -96,4 +93,26 @@ public interface PictureService extends IService<Picture> {
      */
     @Async
     void clearPictureFile(Picture oldPicture);
+
+    /**
+     * 校验对图片的权限
+     * @param loginUser 当前登录用户
+     * @param picture 当前图片
+     */
+    void checkPictureAuth(User loginUser, Picture picture);
+
+
+    /**
+     * 删除图片
+     * @param pictureId 待删除的图片ID
+     * @param loginUser 当前登录用户
+     */
+    void deletePicture(long pictureId, User loginUser);
+
+    /**
+     * 编辑图片
+     * @param pictureEditRequest 编辑图片的请求
+     * @param loginUser 当前登录用户
+     */
+    void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
 }
