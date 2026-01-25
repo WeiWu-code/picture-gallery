@@ -11,10 +11,7 @@ import xd.ww.picturegallery.constant.UserConstant;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
-import xd.ww.picturegallery.model.dto.space.SpaceAddRequest;
-import xd.ww.picturegallery.model.dto.space.SpaceEditRequest;
-import xd.ww.picturegallery.model.dto.space.SpaceQueryRequest;
-import xd.ww.picturegallery.model.dto.space.SpaceUpdateRequest;
+import xd.ww.picturegallery.model.dto.space.*;
 import xd.ww.picturegallery.model.entity.Space;
 import xd.ww.picturegallery.model.entity.User;
 import xd.ww.picturegallery.model.enums.SpaceLevelEnum;
@@ -26,6 +23,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -93,7 +91,7 @@ public class SpaceController {
      */
     @GetMapping("/get")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Space> getSpaceById(long id, HttpServletRequest request) {
+    public BaseResponse<Space> getSpaceById(long id) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
         Space space = spaceService.getById(id);
@@ -176,5 +174,18 @@ public class SpaceController {
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
+
+    @GetMapping("/list/level")
+    public BaseResponse<List<SpaceLevel>> listSpaceLevel() {
+        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values()) // 获取所有枚举
+                .map(spaceLevelEnum -> new SpaceLevel(
+                        spaceLevelEnum.getValue(),
+                        spaceLevelEnum.getText(),
+                        spaceLevelEnum.getMaxCount(),
+                        spaceLevelEnum.getMaxSize()))
+                .collect(Collectors.toList());
+        return ResultUtils.success(spaceLevelList);
+    }
+
 
 }
