@@ -26,7 +26,7 @@ public class SoImageSearchApiFacade {
 
 	public static void main(String[] args) {
 		// 测试以图搜图功能
-		String imageUrl = "https://picture-gallery-1315094248.cos.ap-shanghai.myqcloud.com/public/2014328834419646466/2026-01-26_g5X9LnVkeQJfnXhr.webp";
+		String imageUrl = "https://picture-gallery-1315094248.cos.ap-shanghai.myqcloud.com/space/2015723325592555522/2026-01-26_QUjMMpdMX6uDPeD9.webp";
 		List<SoImageSearchResult> resultList = searchImage(imageUrl, 0);
 		System.out.println("结果列表" + resultList);
 	}

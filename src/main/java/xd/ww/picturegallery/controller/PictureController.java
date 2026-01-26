@@ -1,5 +1,6 @@
 package xd.ww.picturegallery.controller;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +8,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import xd.ww.picturegallery.annotation.AuthCheck;
+import xd.ww.picturegallery.api.aliyunai.AliYunAiApi;
+import xd.ww.picturegallery.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import xd.ww.picturegallery.api.aliyunai.model.GetOutPaintingTaskResponse;
 import xd.ww.picturegallery.api.imagesearch.so.model.SearchPictureByPictureRequest;
 import xd.ww.picturegallery.api.imagesearch.so.model.SoImageSearchResult;
 import xd.ww.picturegallery.api.imagesearch.so.sub.SoImageSearchApiFacade;
@@ -25,6 +29,8 @@ import xd.ww.picturegallery.model.entity.Space;
 import xd.ww.picturegallery.model.entity.User;
 import xd.ww.picturegallery.model.enums.PictureReviewStatusEnum;
 import xd.ww.picturegallery.model.vo.PictureVO;
+import xd.ww.picturegallery.ratelimit.annotation.RateLimit;
+import xd.ww.picturegallery.ratelimit.model.RateLimitType;
 import xd.ww.picturegallery.service.PictureService;
 import xd.ww.picturegallery.service.SpaceService;
 import xd.ww.picturegallery.service.UserService;
@@ -51,6 +57,8 @@ public class PictureController {
     @Resource
     private MultiCacheManager multiCacheManager;
 
+    @Resource
+    private AliYunAiApi aliYunAiApi;
 
     /**
      * 上传图片（可重新上传）
@@ -314,6 +322,36 @@ public class PictureController {
         pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
         return ResultUtils.success(true);
     }
+
+
+
+    /**
+     * 创建 AI 扩图任务
+     */
+    @PostMapping("/out_painting/create_task")
+    @RateLimit(limitType = RateLimitType.USER, rate = 5, rateInterval = 60,message = "AI扩图请求过于频繁，请稍后再试")
+    public BaseResponse<CreateOutPaintingTaskResponse> createPictureOutPaintingTask(
+            @RequestBody CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest,
+            HttpServletRequest request) {
+        if (createPictureOutPaintingTaskRequest == null || createPictureOutPaintingTaskRequest.getPictureId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        CreateOutPaintingTaskResponse response = pictureService.createPictureOutPaintingTask(createPictureOutPaintingTaskRequest, loginUser);
+        return ResultUtils.success(response);
+    }
+
+    /**
+     * 查询 AI 扩图任务
+     */
+    @GetMapping("/out_painting/get_task")
+    public BaseResponse<GetOutPaintingTaskResponse> getPictureOutPaintingTask(String taskId) {
+        ThrowUtils.throwIf(StrUtil.isBlank(taskId), ErrorCode.PARAMS_ERROR);
+        GetOutPaintingTaskResponse task = aliYunAiApi.getOutPaintingTask(taskId);
+        return ResultUtils.success(task);
+    }
+
+
 
 
 }

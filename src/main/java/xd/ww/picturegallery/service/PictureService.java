@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.scheduling.annotation.Async;
+import xd.ww.picturegallery.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import xd.ww.picturegallery.model.dto.picture.*;
 import xd.ww.picturegallery.model.entity.Picture;
 import xd.ww.picturegallery.model.entity.User;
@@ -25,6 +26,17 @@ public interface PictureService extends IService<Picture> {
     PictureVO uploadPicture(Object inputSource,
                             PictureUploadRequest pictureUploadRequest,
                             User loginUser);
+
+
+    /**
+     * AI 扩展图片服务
+     *
+     * @param createPictureOutPaintingTaskRequest 创建扩图任务请求
+     * @param loginUser 登录的用户
+     * @return CreateOutPaintingTaskResponse
+     */
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
+
 
 
     /**

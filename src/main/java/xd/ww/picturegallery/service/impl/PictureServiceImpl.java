@@ -1,5 +1,6 @@
 package xd.ww.picturegallery.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
@@ -17,6 +18,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import xd.ww.picturegallery.api.aliyunai.AliYunAiApi;
+import xd.ww.picturegallery.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import xd.ww.picturegallery.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
@@ -70,6 +74,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Resource
     private TransactionTemplate transactionTemplate;
+
+    @Resource
+    private AliYunAiApi aliYunAiApi;
 
     @Override
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
@@ -169,10 +176,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
         // 开启事务
         Long finalSpaceId = spaceId;
+        Long finalPictureId = pictureId;
         transactionTemplate.execute(status -> {
             boolean result = this.saveOrUpdate(picture);
             ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
-            if (finalSpaceId != null) {
+            // 更新空间，减少额度
+            // 只有创建时，才减少额度，也就是pictureId为null
+            if (finalSpaceId != null && finalPictureId == null) {
                 boolean update = spaceService.lambdaUpdate()
                         .eq(Space::getId, finalSpaceId)
                         .setSql("totalSize = totalSize + " + picture.getPicSize())
@@ -635,6 +645,32 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             log.error("名称解析错误", e);
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "名称解析错误");
         }
+    }
+
+
+    @Override
+    public CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser) {
+        // 获取图片信息
+        Long pictureId = createPictureOutPaintingTaskRequest.getPictureId();
+        Picture picture = Optional.ofNullable(this.getById(pictureId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR));
+        // 权限校验
+        checkPictureAuth(loginUser, picture);
+        // 校验图片大小，阿里云百炼 -> 512*512到4096*4096
+        Integer pieWidth = picture.getPicWidth();
+        Integer pieHeight = picture.getPicHeight();
+        ThrowUtils.throwIf(pieWidth == null || pieHeight == null, ErrorCode.PARAMS_ERROR, "图片宽高不在扩图范围内");
+        int maxPieSize = Math.max(pieHeight, pieWidth);
+        ThrowUtils.throwIf(maxPieSize < 512, ErrorCode.PARAMS_ERROR, "图片宽高过小，至少512");
+        ThrowUtils.throwIf(maxPieSize > 4096, ErrorCode.PARAMS_ERROR, "图片宽高过大，最大4096");
+        // 构造请求参数
+        CreateOutPaintingTaskRequest taskRequest = new CreateOutPaintingTaskRequest();
+        CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();
+        input.setImageUrl(picture.getUrl());
+        taskRequest.setInput(input);
+        BeanUtil.copyProperties(createPictureOutPaintingTaskRequest, taskRequest);
+        // 创建任务
+        return aliYunAiApi.createOutPaintingTask(taskRequest);
     }
 
 }

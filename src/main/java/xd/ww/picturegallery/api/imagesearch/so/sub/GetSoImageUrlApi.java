@@ -7,6 +7,9 @@ import org.jsoup.nodes.Element;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 /**
  * 获取360搜图的图片的接口
  *
@@ -16,9 +19,12 @@ import xd.ww.picturegallery.exception.ErrorCode;
  */
 @Slf4j
 public class GetSoImageUrlApi {
+
 	public static String getSoImageUrl(String imageUrl) {
-		String url = "https://st.so.com/r?src=st&srcsp=home&img_url=" + imageUrl + "&submittype=imgurl";
-		try {
+        String encodedUrl = URLEncoder.encode(imageUrl, StandardCharsets.UTF_8);
+		String url = "https://st.so.com/r?src=st&srcsp=home&img_url=" + encodedUrl + "&submittype=imgurl";
+
+        try {
 			Document document = Jsoup.connect(url).timeout(5000).get();
 			Element imgElement = document.selectFirst(".img_img");
 			if (imgElement != null) {
@@ -43,7 +49,7 @@ public class GetSoImageUrlApi {
 	}
 
 	public static void main(String[] args) {
-		String imageUrl = "https://picture-gallery-1315094248.cos.ap-shanghai.myqcloud.com/public/2014328834419646466/2026-01-26_g5X9LnVkeQJfnXhr.webp";
+		String imageUrl = "https://picture-gallery-1315094248.cos.ap-shanghai.myqcloud.com/space/2015618797690003457/2026-01-26_TJnGsWGXfDDn5ssc.webp";
 		String result = getSoImageUrl(imageUrl);
 		System.out.println("搜索成功，结果 URL：" + result);
 	}
