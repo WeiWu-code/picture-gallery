@@ -121,7 +121,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         }
         // 针对用户进行加锁
         // 分布式锁，redisson
-        RLock rLock = redissonClient.getLock(REDISSON_LOCK_KEY);
+        RLock rLock = redissonClient.getLock(REDISSON_LOCK_KEY + userId);
         try{
             boolean isLocked = rLock.tryLock(0, -1, TimeUnit.MILLISECONDS);
             if (!isLocked) {

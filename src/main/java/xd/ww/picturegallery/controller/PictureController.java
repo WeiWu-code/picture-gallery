@@ -7,6 +7,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import xd.ww.picturegallery.annotation.AuthCheck;
+import xd.ww.picturegallery.api.imagesearch.so.model.SearchPictureByPictureRequest;
+import xd.ww.picturegallery.api.imagesearch.so.model.SoImageSearchResult;
+import xd.ww.picturegallery.api.imagesearch.so.sub.SoImageSearchApiFacade;
 import xd.ww.picturegallery.common.BaseResponse;
 import xd.ww.picturegallery.common.DeleteRequest;
 import xd.ww.picturegallery.common.ResultUtils;
@@ -274,6 +277,42 @@ public class PictureController {
 
         // 返回结果
         return ResultUtils.success(pictureVOPage);
+    }
+
+    /**
+     * 以图搜图
+     */
+    @PostMapping("/search/picture")
+    public BaseResponse<List<SoImageSearchResult>> searchPictureByPictureIsSo(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+        ThrowUtils.throwIf(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
+        Long pictureId = searchPictureByPictureRequest.getPictureId();
+        ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+        Picture oldPicture = pictureService.getById(pictureId);
+        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+        // 这个 start 是控制查询多少页, 每页是 20 条
+        int start = 0;
+        List<SoImageSearchResult> resultList = SoImageSearchApiFacade.searchImage(
+                oldPicture.getUrl(), start
+        );
+        return ResultUtils.success(resultList);
+    }
+
+    @PostMapping("/search/color")
+    public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPictureByColorRequest searchPictureByColorRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR);
+        String picColor = searchPictureByColorRequest.getPicColor();
+        Long spaceId = searchPictureByColorRequest.getSpaceId();
+        User loginUser = userService.getLoginUser(request);
+        List<PictureVO> result = pictureService.searchPictureByColor(spaceId, picColor, loginUser);
+        return ResultUtils.success(result);
+    }
+
+    @PostMapping("/edit/batch")
+    public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureEditByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
+        return ResultUtils.success(true);
     }
 
 

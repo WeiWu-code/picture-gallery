@@ -22,6 +22,7 @@
             <result property="updateTime" column="updateTime" />
             <result property="spaceId" column="spaceId" />
             <result property="isDelete" column="isDelete" />
+            <result property="picColor" column="picColor" />
             <result property="thumbnailUrl" column="thumbnailUrl" jdbcType="VARCHAR"/>
     </resultMap>
 

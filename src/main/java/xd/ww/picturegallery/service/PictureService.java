@@ -10,6 +10,7 @@ import xd.ww.picturegallery.model.entity.User;
 import xd.ww.picturegallery.model.vo.PictureVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 public interface PictureService extends IService<Picture> {
 
@@ -115,4 +116,21 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser 当前登录用户
      */
     void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+    /**
+     * 根据颜色在指定的空间中选择图片
+     * @param spaceId 空间Id
+     * @param picColor 颜色
+     * @param loginUser 当前登录用户
+     * @return List<PictureVO>
+     */
+    List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
+
+
+    /**
+     * 批量编辑图片
+     * @param pictureEditByBatchRequest 批量编辑图片请求
+     * @param loginUser 当前登录用户
+     */
+    void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
 }
