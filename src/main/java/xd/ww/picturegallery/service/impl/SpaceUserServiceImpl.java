@@ -6,6 +6,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
@@ -45,6 +46,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
     private UserService userService;
 
     @Resource
+    @Lazy
     private SpaceService spaceService;
 
     @Override
@@ -155,7 +157,6 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
         });
         return spaceUserVOList;
     }
-
 
 
 }

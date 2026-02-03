@@ -13,6 +13,8 @@ import xd.ww.picturegallery.common.ResultUtils;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
+import xd.ww.picturegallery.manager.auth.annotation.SaSpaceCheckPermission;
+import xd.ww.picturegallery.manager.auth.model.SpaceUserPermissionConstant;
 import xd.ww.picturegallery.model.dto.spaceuser.SpaceUserAddRequest;
 import xd.ww.picturegallery.model.dto.spaceuser.SpaceUserEditRequest;
 import xd.ww.picturegallery.model.dto.spaceuser.SpaceUserQueryRequest;
@@ -41,7 +43,8 @@ public class SpaceUserController {
      * 添加成员到空间
      */
     @PostMapping("/add")
-    public BaseResponse<Long> addSpaceUser(@RequestBody SpaceUserAddRequest spaceUserAddRequest, HttpServletRequest request) {
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
+    public BaseResponse<Long> addSpaceUser(@RequestBody SpaceUserAddRequest spaceUserAddRequest) {
         ThrowUtils.throwIf(spaceUserAddRequest == null, ErrorCode.PARAMS_ERROR);
         long id = spaceUserService.addSpaceUser(spaceUserAddRequest);
         return ResultUtils.success(id);
@@ -51,8 +54,8 @@ public class SpaceUserController {
      * 从空间移除成员
      */
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteSpaceUser(@RequestBody DeleteRequest deleteRequest,
-                                                 HttpServletRequest request) {
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
+    public BaseResponse<Boolean> deleteSpaceUser(@RequestBody DeleteRequest deleteRequest) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -70,6 +73,7 @@ public class SpaceUserController {
      * 查询某个成员在某个空间的信息
      */
     @PostMapping("/get")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceUser> getSpaceUser(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
         // 参数校验
         ThrowUtils.throwIf(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
@@ -86,8 +90,8 @@ public class SpaceUserController {
      * 查询成员信息列表
      */
     @PostMapping("/list")
-    public BaseResponse<List<SpaceUserVO>> listSpaceUser(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest,
-                                                         HttpServletRequest request) {
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
+    public BaseResponse<List<SpaceUserVO>> listSpaceUser(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
         ThrowUtils.throwIf(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
         List<SpaceUser> spaceUserList = spaceUserService.list(
                 spaceUserService.getQueryWrapper(spaceUserQueryRequest)
@@ -99,8 +103,8 @@ public class SpaceUserController {
      * 编辑成员信息（设置权限）
      */
     @PostMapping("/edit")
-    public BaseResponse<Boolean> editSpaceUser(@RequestBody SpaceUserEditRequest spaceUserEditRequest,
-                                               HttpServletRequest request) {
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
+    public BaseResponse<Boolean> editSpaceUser(@RequestBody SpaceUserEditRequest spaceUserEditRequest) {
         if (spaceUserEditRequest == null || spaceUserEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }

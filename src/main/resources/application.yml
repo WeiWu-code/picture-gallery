@@ -1,5 +1,5 @@
 server:
-  port: 9020
+  port: 9010
   servlet:
     context-path: /api
     session:
@@ -16,7 +16,6 @@ spring:
     database: 0
     host: 127.0.0.1
     port: 6379
-
     timeout: 5000
 
   # 数据库配置
@@ -30,7 +29,6 @@ spring:
   session:
     store-type: redis
     timeout: 3600
-
 
 
 mybatis-plus:

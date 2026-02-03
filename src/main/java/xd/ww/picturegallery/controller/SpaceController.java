@@ -11,6 +11,7 @@ import xd.ww.picturegallery.constant.UserConstant;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
+import xd.ww.picturegallery.manager.auth.SpaceUserAuthManager;
 import xd.ww.picturegallery.model.dto.space.*;
 import xd.ww.picturegallery.model.entity.Space;
 import xd.ww.picturegallery.model.entity.User;
@@ -35,6 +36,9 @@ public class SpaceController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -110,9 +114,13 @@ public class SpaceController {
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
         SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
         return ResultUtils.success(spaceVO);
     }
+
 
     /**
      * 分页获取空间列表（仅管理员可用）
