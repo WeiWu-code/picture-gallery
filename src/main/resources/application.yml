@@ -53,6 +53,8 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - xd.ww.picturegallery.controller
-
+sa-token:
+  timeout: 3600
+  active-timeout: 1800
 
 
