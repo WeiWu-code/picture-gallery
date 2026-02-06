@@ -193,8 +193,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             return picture;
         });
 
-        boolean result = this.saveOrUpdate(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
         return PictureVO.objToVo(picture);
     }
 
