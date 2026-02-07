@@ -71,10 +71,6 @@ public class SpaceVO implements Serializable {
      */
     private UserVO user;
 
-    /**
-     * 空间信息
-     */
-    private Long spaceId;
 
     /**
      * 空间类型：0-私有 1-团队

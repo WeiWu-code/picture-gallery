@@ -58,6 +58,10 @@ public class PictureVO implements Serializable {
      */
     private String thumbnailUrl;
 
+    /**
+     * 空间 id
+     */
+    private Long spaceId;
 
     /**  
      * 图片高度  
