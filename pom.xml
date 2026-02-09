@@ -71,7 +71,7 @@
             <version>1.15.3</version>
         </dependency>
 
-        <!--        Hutool工具库-->
+        <!-- Hutool工具库-->
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
@@ -118,13 +118,20 @@
             <version>3.5.9</version>
         </dependency>
 
-<!--        AOP切面-->
+        <!--腾讯混元大模型-->
+        <dependency>
+            <groupId>com.tencentcloudapi</groupId>
+            <artifactId>tencentcloud-sdk-java-hunyuan</artifactId>
+            <version>3.1.1364</version>
+        </dependency>
+
+        <!-- AOP切面-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
-<!--        commons lang3-->
+        <!-- commons lang3-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>

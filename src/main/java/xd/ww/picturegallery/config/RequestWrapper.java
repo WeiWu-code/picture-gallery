@@ -11,7 +11,7 @@ import java.io.*;
 /**
  * 包装请求，使 InputStream 可以重复读取
  *
- * @author pine
+ * @author wei
  */
 @Slf4j
 public class RequestWrapper extends HttpServletRequestWrapper {

@@ -21,7 +21,7 @@ import xd.ww.picturegallery.constant.UserConstant;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
-import xd.ww.picturegallery.manager.MultiCacheManager;
+import xd.ww.picturegallery.manager.CacheManager;
 import xd.ww.picturegallery.manager.auth.SpaceUserAuthManager;
 import xd.ww.picturegallery.manager.auth.StpKit;
 import xd.ww.picturegallery.manager.auth.annotation.SaSpaceCheckPermission;
@@ -38,6 +38,7 @@ import xd.ww.picturegallery.ratelimit.model.RateLimitType;
 import xd.ww.picturegallery.service.PictureService;
 import xd.ww.picturegallery.service.SpaceService;
 import xd.ww.picturegallery.service.UserService;
+import xd.ww.picturegallery.utils.CacheKeyUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -62,7 +63,7 @@ public class PictureController {
     private SpaceUserAuthManager spaceUserAuthManager;
 
     @Resource
-    private MultiCacheManager multiCacheManager;
+    private CacheManager cacheManager;
 
     @Resource
     private AliYunAiApi aliYunAiApi;
@@ -160,6 +161,11 @@ public class PictureController {
     @GetMapping("/get/vo")
     public BaseResponse<PictureVO> getPictureVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
+        // 查询缓存
+        PictureVO pictureVoById = cacheManager.getPictureVoById(id);
+        if(pictureVoById != null) {
+            return ResultUtils.success(pictureVoById);
+        }
         // 查询数据库
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
@@ -177,6 +183,9 @@ public class PictureController {
         List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
         PictureVO pictureVO = pictureService.getPictureVO(picture, request);
         pictureVO.setPermissionList(permissionList);
+        // 加入缓存
+        String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(id);
+        cacheManager.setCacheForValue(pictureVoByIdKey, JSONUtil.toJsonStr(pictureVO));
         // 获取封装类
         return ResultUtils.success(pictureVO);
     }
@@ -187,6 +196,12 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 查询缓存链
+        Page<PictureVO> pictureVOPage = cacheManager.listPictureVoByPage(pictureQueryRequest);
+        if(pictureVOPage != null) {
+            return ResultUtils.success(pictureVOPage);
+        }
+        // 查询数据库
         // 空间权限校验
         Long spaceId = pictureQueryRequest.getSpaceId();
         // 公开图库
@@ -200,8 +215,12 @@ public class PictureController {
         }
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size), pictureService.getQueryWrapper(pictureQueryRequest));
+        pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        // 添加进缓存
+        String key = CacheKeyUtils.listPictureByPageVoKey(pictureQueryRequest);
+        cacheManager.setCacheForValue(key, JSONUtil.toJsonStr(pictureVOPage));
         // 获取封装类
-        return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
+        return ResultUtils.success(pictureVOPage);
     }
 
     /**
@@ -272,26 +291,6 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         pictureService.doPictureReview(pictureReviewRequest, loginUser);
         return ResultUtils.success(true);
-    }
-
-    /**
-     * 使用redis分布式缓存
-     * @param pictureQueryRequest 图片查询请求
-     * @param request HttpServletRequest
-     * @return Page<PictureVO>
-     */
-    @PostMapping("/list/page/vo/cache")
-    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
-                                                                      HttpServletRequest request) {
-        long size = pictureQueryRequest.getPageSize();
-        // 限制爬虫
-        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
-        // 普通用户默认只能查看已过审的数据
-        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
-        Page<PictureVO> pictureVOPage = multiCacheManager.getPictureVOPageByCache(pictureQueryRequest, request);
-
-        // 返回结果
-        return ResultUtils.success(pictureVOPage);
     }
 
     /**

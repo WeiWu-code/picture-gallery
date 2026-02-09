@@ -9,6 +9,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -21,6 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import xd.ww.picturegallery.api.aliyunai.AliYunAiApi;
 import xd.ww.picturegallery.api.aliyunai.model.CreateOutPaintingTaskRequest;
 import xd.ww.picturegallery.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import xd.ww.picturegallery.api.hunyuan.HunyuanImageAnalysis;
+import xd.ww.picturegallery.api.hunyuan.model.ImageAnalysisResult;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
@@ -59,6 +63,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Resource
     private UserService userService;
+
+    @Resource
+    // 混元模型
+    private HunyuanImageAnalysis hunyuanImageAnalysis;
 
     @Resource
     private FilePictureUpload filePictureUpload;
@@ -102,11 +110,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         }
 
         // 用于判断是新增还是更新图片
-        Long pictureId = null;
-        if (pictureUploadRequest != null) {
-            pictureId = pictureUploadRequest.getId();
-        }
-
+        Long pictureId = pictureUploadRequest.getId();
         // 如果是更新图片，需要校验图片是否存在
         if (pictureId != null) {
             Picture oldPicture = this.getById(pictureId);
@@ -144,15 +148,53 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             pictureUploadTemplate = urlPictureUpload;
         }
         UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
+        // 调用AI分析图片内容
+        String tags = pictureUploadRequest.getTags();
+        String category = pictureUploadRequest.getCategory();
+        String introduction = pictureUploadRequest.getIntroduction();
+
+        if(StringUtils.isAnyBlank(tags, category, introduction)) {
+            try {
+                ImageAnalysisResult aiResult = hunyuanImageAnalysis.analyzeImage(uploadPictureResult.getUrl());
+                if(tags == null) {
+                    StringBuilder tag_format = tagFormat(aiResult);
+                    pictureUploadRequest.setTags(tag_format.toString());
+                }
+                if(category == null){
+                    pictureUploadRequest.setCategory(aiResult.getCategory());
+                }
+                if(introduction == null){
+                    pictureUploadRequest.setIntroduction(aiResult.getDescription());
+                }
+                log.info("图片AI分析成功: 分类= {}, 标签={}", aiResult.getCategory(), aiResult.getTags());
+            } catch (Exception e) {
+                // AI分析失败的处理
+                if(category == null) {
+                    pictureUploadRequest.setCategory("其他");
+                }
+                if(introduction == null) {
+                    pictureUploadRequest.setIntroduction("一张来自网络的图片");
+                }
+                if (tags == null) {
+                    pictureUploadRequest.setTags("[网络图片]");
+                }
+                log.warn("图片AI分析失败: {}  ", e.getMessage());
+            }
+        }
+
         // 构造要入库的图片信息
         Picture picture = new Picture();
         // 补充设置 spaceId
         picture.setSpaceId(spaceId);
         picture.setUrl(uploadPictureResult.getUrl());
         picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
+        picture.setTags(pictureUploadRequest.getTags());
+        picture.setCategory(pictureUploadRequest.getCategory());
+        picture.setIntroduction(pictureUploadRequest.getIntroduction());
+
         String picName = uploadPictureResult.getPicName();
         // 如果传名字了，设置picName
-        if(pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
+        if(StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
             picName = pictureUploadRequest.getPicName();
         }
         picture.setName(picName);
@@ -194,6 +236,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         });
 
         return PictureVO.objToVo(picture);
+    }
+
+    @NotNull
+    private static StringBuilder tagFormat(ImageAnalysisResult aiResult) {
+        String[] tag_array = aiResult.getTags().split(",");
+        StringBuilder tag_format =  new StringBuilder();
+        tag_format.append("[");
+        for (String tag : tag_array) {
+            tag_format.append('\"');
+            tag_format.append(tag);
+            tag_format.append('\"');
+            tag_format.append(',');
+        }
+        tag_format.replace(tag_format.length() - 1, tag_format.length(), "]");
+        return tag_format;
     }
 
     @Override
@@ -389,6 +446,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         }
         Elements imgElementList = div.select("img.mimg");
         int uploadCount = 0;
+        // 遍历图片，批量上传并AI分析
         for (Element imgElement : imgElementList) {
             String fileUrl = imgElement.attr("src");
             if (StrUtil.isBlank(fileUrl)) {
@@ -402,6 +460,25 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             }
             // 上传图片
             PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
+            // 调用AI分析图片内容
+            try {
+                ImageAnalysisResult aiResult = hunyuanImageAnalysis.analyzeImage(fileUrl);
+
+                StringBuilder tag_format = tagFormat(aiResult);
+                pictureUploadRequest.setCategory(aiResult.getCategory());
+                pictureUploadRequest.setTags(tag_format.toString());
+                pictureUploadRequest.setIntroduction(aiResult.getDescription());
+
+                log.info("图片AI分析成功: 分类={}, 标签={}", aiResult.getCategory(), aiResult.getTags());
+
+            } catch (Exception e) {
+                // AI分析失败的处理
+                pictureUploadRequest.setCategory("其他");
+                pictureUploadRequest.setTags("[网络图片]");
+                pictureUploadRequest.setIntroduction("一张来自网络的图片");
+                log.warn("图片AI分析失败: {}", e.getMessage());
+            }
+
             // 设置图片名称序号自增
             if(StrUtil.isNotBlank(namePrefix)) {
                 pictureUploadRequest.setPicName(namePrefix + (uploadCount + 1));

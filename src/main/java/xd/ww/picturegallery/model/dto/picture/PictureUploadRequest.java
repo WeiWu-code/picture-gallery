@@ -29,6 +29,19 @@ public class PictureUploadRequest implements Serializable {
      */
     private Long spaceId;
 
+    /**
+     * 简介
+     */
+    private String introduction;
 
+    /**
+     * 分类
+     */
+    private String category;
+
+    /**
+     * 标签（JSON 数组）
+     */
+    private String tags;
 
 }

@@ -31,7 +31,7 @@ public class PictureEditEventProducer {
      */
     public void publishEvent(PictureEditRequestMessage pictureEditRequestMessage, WebSocketSession session, User user, Long pictureId) {
         RingBuffer<PictureEditEvent> ringBuffer = pictureEditEventDisruptor.getRingBuffer();
-        // 获取到可以防止事件的位置
+        // 获取到可以发布事件的位置
         long next = ringBuffer.next();
         PictureEditEvent pictureEditEvent = ringBuffer.get(next);
         pictureEditEvent.setPictureEditRequestMessage(pictureEditRequestMessage);
