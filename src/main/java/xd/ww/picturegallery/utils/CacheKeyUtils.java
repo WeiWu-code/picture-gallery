@@ -15,14 +15,14 @@ public class CacheKeyUtils {
      * @param pictureQueryRequest
      * @return
      */
-    public static String listPictureByPageVoKey(PictureQueryRequest pictureQueryRequest) {
+    public static String listPictureByPageVoKey(PictureQueryRequest pictureQueryRequest, String version) {
         // 普通用户默认只能看到审核通过的数据
         pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         // 查询缓存，缓存中没有，再查询数据库
         // 构建缓存的 key
         String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
         String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
-        return String.format("smartGalleryHub:listPictureVOByPage:%s", hashKey);
+        return String.format("smartGalleryHub:listPictureVOByPage:%s%s", version,hashKey);
     }
 
     /**

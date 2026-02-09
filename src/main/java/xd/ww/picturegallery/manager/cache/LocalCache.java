@@ -1,59 +1,49 @@
 package xd.ww.picturegallery.manager.cache;
 
-import cn.hutool.core.collection.CollUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 本地缓存
  */
 @Component
-public class LocalCache extends CacheChainTemplate {
-    private final Cache<String, Object> LOCAL_CACHE =
-            Caffeine.newBuilder().initialCapacity(1024)
-                    .maximumSize(10_000L)
-                    // 缓存 5 分钟移除
-                    .expireAfterWrite(5L, TimeUnit.MINUTES)
-                    .build();
+public class LocalCache extends EnhancedCacheChainTemplate {
+    private final Cache<String, Object> cache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(3, TimeUnit.MINUTES)
+            .build();
 
-    @Override
     @Autowired
     @Qualifier("redisCache")
-    public void setNext(CacheChainTemplate next) {
+    @Override
+    public void setNext(EnhancedCacheChainTemplate next) {
         super.setNext(next);
     }
 
     @Override
     public String getStringValue(String key) {
-        return (String) LOCAL_CACHE.getIfPresent(key);
+        return (String) cache.getIfPresent(key);
     }
 
     @Override
-    public void setStringValue(String key, String value) {
-        LOCAL_CACHE.put(key, value);
+    protected boolean isL2() {
+        return false;
     }
 
     @Override
-    public Set<String> getKeys() {
-        Set<String> strings = LOCAL_CACHE.asMap().keySet();
-        return CollUtil.isEmpty(strings) ? new HashSet<>() : new HashSet<>(strings);
+    public void setStringValue(String key, String value, long expireSeconds) {
+        cache.put(key, value);
     }
+
 
     @Override
     public void deleteValue(String key) {
-        LOCAL_CACHE.invalidate(key);
+        cache.invalidate(key);
     }
 
-    @Override
-    public void deleteValues(List<String> keys) {
-        LOCAL_CACHE.invalidateAll(keys);
-    }
 }

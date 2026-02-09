@@ -21,11 +21,12 @@ import xd.ww.picturegallery.constant.UserConstant;
 import xd.ww.picturegallery.exception.BusinessException;
 import xd.ww.picturegallery.exception.ErrorCode;
 import xd.ww.picturegallery.exception.ThrowUtils;
-import xd.ww.picturegallery.manager.CacheManager;
+import xd.ww.picturegallery.manager.cache.CacheManager;
 import xd.ww.picturegallery.manager.auth.SpaceUserAuthManager;
 import xd.ww.picturegallery.manager.auth.StpKit;
 import xd.ww.picturegallery.manager.auth.annotation.SaSpaceCheckPermission;
 import xd.ww.picturegallery.manager.auth.model.SpaceUserPermissionConstant;
+import xd.ww.picturegallery.manager.cache.CacheResult;
 import xd.ww.picturegallery.model.dto.picture.*;
 import xd.ww.picturegallery.model.entity.Picture;
 import xd.ww.picturegallery.model.entity.PictureTagCategory;
@@ -44,6 +45,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.List;
+
+import static xd.ww.picturegallery.manager.cache.EnhancedCacheChainTemplate.NULL_OBJECT;
 
 @RestController
 @Slf4j
@@ -79,9 +82,15 @@ public class PictureController {
             HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
+        // 上传后添加
+        String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(pictureVO.getId());
+        cacheManager.setCacheForValue(pictureVoByIdKey, JSONUtil.toJsonStr(pictureVO), true);
+        // 升级版本号
+        // 这会让所有 listPictureVOByPage 的 Key 瞬间“逻辑失效”
+        // 下一个请求会用新版本号生成 Key，查不到缓存，从而去查 DB 拿最新数据
+        cacheManager.refreshPageCache();
         return ResultUtils.success(pictureVO);
     }
-
 
     /**
      * 删除图片
@@ -94,6 +103,12 @@ public class PictureController {
         }
         User loginUser = userService.getLoginUser(request);
         pictureService.deletePicture(deleteRequest.getId(), loginUser);
+        // 查询是否在缓存中
+        cacheManager.deleteCacheByKey(CacheKeyUtils.getPictureVoByIdKey(deleteRequest.getId()));
+        // 升级版本号
+        // 这会让所有 listPictureVOByPage 的 Key 瞬间“逻辑失效”
+        // 下一个请求会用新版本号生成 Key，查不到缓存，从而去查 DB 拿最新数据
+        cacheManager.refreshPageCache();
         return ResultUtils.success(true);
     }
 
@@ -162,13 +177,23 @@ public class PictureController {
     public BaseResponse<PictureVO> getPictureVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询缓存
-        PictureVO pictureVoById = cacheManager.getPictureVoById(id);
-        if(pictureVoById != null) {
-            return ResultUtils.success(pictureVoById);
+        CacheResult<PictureVO> pictureVoById = cacheManager.getPictureVoById(id);
+        if(pictureVoById.isHit() && pictureVoById.getData() == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
+        }else if(pictureVoById.isHit()) {
+            return ResultUtils.success(pictureVoById.getData());
         }
+        // 下面是pictureVoById.isHit() false
+
         // 查询数据库
         Picture picture = pictureService.getById(id);
-        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
+        if(picture == null){
+            // 要设置NULL值
+            // 加入缓存
+            String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(id);
+            cacheManager.setCacheForValue(pictureVoByIdKey, NULL_OBJECT, true);
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
+        }
         // 空间的图片，需要校验权限
         Space space = null;
         Long spaceId = picture.getSpaceId();
@@ -185,7 +210,7 @@ public class PictureController {
         pictureVO.setPermissionList(permissionList);
         // 加入缓存
         String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(id);
-        cacheManager.setCacheForValue(pictureVoByIdKey, JSONUtil.toJsonStr(pictureVO));
+        cacheManager.setCacheForValue(pictureVoByIdKey, JSONUtil.toJsonStr(pictureVO), true);
         // 获取封装类
         return ResultUtils.success(pictureVO);
     }
@@ -197,9 +222,9 @@ public class PictureController {
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         // 查询缓存链
-        Page<PictureVO> pictureVOPage = cacheManager.listPictureVoByPage(pictureQueryRequest);
-        if(pictureVOPage != null) {
-            return ResultUtils.success(pictureVOPage);
+        CacheResult<Page<PictureVO>> cacheVOPage = cacheManager.listPictureVoByPage(pictureQueryRequest);
+        if(cacheVOPage.isHit() && cacheVOPage.getData() != null) {
+            return ResultUtils.success(cacheVOPage.getData());
         }
         // 查询数据库
         // 空间权限校验
@@ -215,10 +240,9 @@ public class PictureController {
         }
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size), pictureService.getQueryWrapper(pictureQueryRequest));
-        pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
         // 添加进缓存
-        String key = CacheKeyUtils.listPictureByPageVoKey(pictureQueryRequest);
-        cacheManager.setCacheForValue(key, JSONUtil.toJsonStr(pictureVOPage));
+        cacheManager.setCacheForPageValue(pictureQueryRequest, JSONUtil.toJsonStr(pictureVOPage));
         // 获取封装类
         return ResultUtils.success(pictureVOPage);
     }
@@ -234,6 +258,14 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         String fileUrl = pictureUploadRequest.getFileUrl();
         PictureVO pictureVO = pictureService.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
+        // 上传后添加
+        String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(pictureVO.getId());
+        cacheManager.setCacheForValue(pictureVoByIdKey, JSONUtil.toJsonStr(pictureVO), true);
+
+        // 升级版本号
+        // 这会让所有 listPictureVOByPage 的 Key 瞬间“逻辑失效”
+        // 下一个请求会用新版本号生成 Key，查不到缓存，从而去查 DB 拿最新数据
+        cacheManager.refreshPageCache();
         return ResultUtils.success(pictureVO);
     }
 
@@ -252,9 +284,12 @@ public class PictureController {
         ThrowUtils.throwIf(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
+        // 升级版本号
+        // 这会让所有 listPictureVOByPage 的 Key 瞬间“逻辑失效”
+        // 下一个请求会用新版本号生成 Key，查不到缓存，从而去查 DB 拿最新数据
+        cacheManager.refreshPageCache();
         return ResultUtils.success(uploadCount);
     }
-
 
 
     /**
@@ -268,6 +303,9 @@ public class PictureController {
         }
         User loginUser = userService.getLoginUser(request);
         pictureService.editPicture(pictureEditRequest, loginUser);
+        // 立刻删除缓存
+        String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(pictureEditRequest.getId());
+        cacheManager.deleteCacheByKey(pictureVoByIdKey);
         return ResultUtils.success(true);
     }
 
@@ -275,8 +313,8 @@ public class PictureController {
     @GetMapping("/tag_category")
     public BaseResponse<PictureTagCategory> listPictureTagCategory() {
         PictureTagCategory pictureTagCategory = new PictureTagCategory();
-        List<String> tagList = Arrays.asList("热门", "搞笑", "生活", "高清", "艺术", "校园", "背景", "简历", "创意");
-        List<String> categoryList = Arrays.asList("模板", "电商", "表情包", "素材", "海报");
+        List<String> tagList = Arrays.asList("热门", "搞笑", "生活", "高清", "艺术", "校园", "背景", "网络", "创意");
+        List<String> categoryList = Arrays.asList("自然风光","城市建筑","人像摄影","静物特写","动物植物","美食餐饮","抽象艺术","商务科技");
         pictureTagCategory.setTagList(tagList);
         pictureTagCategory.setCategoryList(categoryList);
         return ResultUtils.success(pictureTagCategory);
@@ -287,9 +325,17 @@ public class PictureController {
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureReviewRequest,
                                                  HttpServletRequest request) {
-        ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(pictureReviewRequest == null || pictureReviewRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         pictureService.doPictureReview(pictureReviewRequest, loginUser);
+        // 立刻删除缓存
+        String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(pictureReviewRequest.getId());
+        cacheManager.deleteCacheByKey(pictureVoByIdKey);
+
+        // 升级版本号
+        // 这会让所有 listPictureVOByPage 的 Key 瞬间“逻辑失效”
+        // 下一个请求会用新版本号生成 Key，查不到缓存，从而去查 DB 拿最新数据
+        cacheManager.refreshPageCache();
         return ResultUtils.success(true);
     }
 
@@ -329,9 +375,19 @@ public class PictureController {
         ThrowUtils.throwIf(pictureEditByBatchRequest == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
+        // 删除这一批次的缓存
+        List<Long> pictureIdList = pictureEditByBatchRequest.getPictureIdList();
+        for(Long pictureId : pictureIdList){
+            // 立刻删除缓存
+            String pictureVoByIdKey = CacheKeyUtils.getPictureVoByIdKey(pictureId);
+            cacheManager.deleteCacheByKey(pictureVoByIdKey);
+        }
+        // 升级版本号
+        // 这会让所有 listPictureVOByPage 的 Key 瞬间“逻辑失效”
+        // 下一个请求会用新版本号生成 Key，查不到缓存，从而去查 DB 拿最新数据
+        cacheManager.refreshPageCache();
         return ResultUtils.success(true);
     }
-
 
 
     /**
@@ -360,8 +416,5 @@ public class PictureController {
         GetOutPaintingTaskResponse task = aliYunAiApi.getOutPaintingTask(taskId);
         return ResultUtils.success(task);
     }
-
-
-
 
 }
