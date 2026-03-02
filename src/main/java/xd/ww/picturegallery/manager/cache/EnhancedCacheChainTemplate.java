@@ -11,8 +11,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
-import java.util.Optional;
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -30,9 +29,6 @@ public abstract class EnhancedCacheChainTemplate {
 
     /** 空值缓存的 JSON 占位字符串，业务不可能出现的值 */
     public static final String NULL_OBJECT = "\"__NULL__\"";
-
-    /** 延迟双删队列在 Redis 中的 zset key */
-    private static final String DELAY_QUEUE_KEY = "cache:delay:delete";
 
     @Resource
     private RedissonClient redissonClient;
@@ -62,7 +58,6 @@ public abstract class EnhancedCacheChainTemplate {
         if(isL2()){
             this.bloomFilter = redissonClient.getBloomFilter("cache:bloom:filter");
             this.bloomFilter.tryInit(1_000_000L, 0.01);
-            startDelayDeleteTask();
         }
     }
 
@@ -92,6 +87,14 @@ public abstract class EnhancedCacheChainTemplate {
      * @param key 缓存键
      */
     public abstract void deleteValue(String key);
+
+    /**
+     * 从当前节点删除多个 key
+     *
+     * @param keys 缓存键
+     */
+    public abstract void deleteValues(List<String> keys);
+
 
     /**
      * 链式获取字符串值：
@@ -187,10 +190,6 @@ public abstract class EnhancedCacheChainTemplate {
         safeDelete(key); // 第一次删除
         if (next != null) {
             next.deleteValueChain(key);
-        }else{
-            // 延迟双删：5 秒后再次删除，防止并发写脏
-            long delayMillis = System.currentTimeMillis() + 5_000;
-            stringRedisTemplate.opsForZSet().add(DELAY_QUEUE_KEY, key, delayMillis);
         }
     }
 
@@ -247,29 +246,6 @@ public abstract class EnhancedCacheChainTemplate {
      */
     private long randomExpire() {
         return (long) 300 + (long) (Math.random() * 300);
-    }
-
-
-    /**
-     * Spring 依赖注入完成后启动延迟队列消费者
-     */
-
-    private void startDelayDeleteTask() {
-        SCHEDULER.scheduleWithFixedDelay(() -> {
-            try {
-                Set<String> keys = stringRedisTemplate.opsForZSet()
-                        .rangeByScore(DELAY_QUEUE_KEY, 0, System.currentTimeMillis(), 0, 100);
-                if (keys != null && !keys.isEmpty()) {
-                    for (String k : keys) {
-                        stringRedisTemplate.delete(k);           // 二次删除
-                        stringRedisTemplate.opsForZSet().remove(DELAY_QUEUE_KEY, k);
-                        log.debug("delay second delete key={}", k);
-                    }
-                }
-            } catch (Exception e) {
-                log.error("delay delete task error", e);
-            }
-        }, 0, 1, TimeUnit.SECONDS);
     }
 
 

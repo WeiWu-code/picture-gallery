@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -45,5 +46,11 @@ public class LocalCache extends EnhancedCacheChainTemplate {
     public void deleteValue(String key) {
         cache.invalidate(key);
     }
+
+    @Override
+    public void deleteValues(List<String> keys) {
+        cache.invalidateAll(keys);
+    }
+
 
 }
