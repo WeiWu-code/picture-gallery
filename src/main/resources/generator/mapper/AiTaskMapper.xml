@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xd.ww.picturegallery.mapper.AiTaskMapper">
+
+    <resultMap id="BaseResultMap" type="xd.ww.picturegallery.model.entity.AiTask">
+            <id property="id" column="id" />
+            <result property="taskType" column="taskType" />
+            <result property="status" column="status" />
+            <result property="pictureId" column="pictureId" />
+            <result property="inputParams" column="inputParams" />
+            <result property="outputData" column="outputData" />
+            <result property="outTaskId" column="outTaskId" />
+            <result property="errorMessage" column="errorMessage" />
+            <result property="userId" column="userId" />
+            <result property="createTime" column="createTime" />
+            <result property="updateTime" column="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,taskType,status,pictureId,inputParams,outputData,
+        outTaskId,errorMessage,userId,createTime,updateTime
+    </sql>
+</mapper>

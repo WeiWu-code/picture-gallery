@@ -41,6 +41,7 @@ import xd.ww.picturegallery.model.entity.User;
 import xd.ww.picturegallery.model.enums.PictureReviewStatusEnum;
 import xd.ww.picturegallery.model.vo.PictureVO;
 import xd.ww.picturegallery.model.vo.UserVO;
+import xd.ww.picturegallery.service.AiTaskService;
 import xd.ww.picturegallery.service.PictureService;
 import xd.ww.picturegallery.service.SpaceService;
 import xd.ww.picturegallery.service.UserService;
@@ -85,6 +86,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Resource
     private AliYunAiApi aliYunAiApi;
+
+    @Resource
+    private AiTaskService aiTaskService;
 
     @Override
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
@@ -148,39 +152,39 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             pictureUploadTemplate = urlPictureUpload;
         }
         UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
-        // 调用AI分析图片内容
-        String tags = pictureUploadRequest.getTags();
-        String category = pictureUploadRequest.getCategory();
-        String introduction = pictureUploadRequest.getIntroduction();
-
-        if(StringUtils.isAnyBlank(tags, category, introduction)) {
-            try {
-                ImageAnalysisResult aiResult = hunyuanImageAnalysis.analyzeImage(uploadPictureResult.getUrl());
-                if(tags == null) {
-                    StringBuilder tag_format = tagFormat(aiResult);
-                    pictureUploadRequest.setTags(tag_format.toString());
-                }
-                if(category == null){
-                    pictureUploadRequest.setCategory(aiResult.getCategory());
-                }
-                if(introduction == null){
-                    pictureUploadRequest.setIntroduction(aiResult.getDescription());
-                }
-                log.info("图片AI分析成功: 分类= {}, 标签={}", aiResult.getCategory(), aiResult.getTags());
-            } catch (Exception e) {
-                // AI分析失败的处理
-                if(category == null) {
-                    pictureUploadRequest.setCategory("其他");
-                }
-                if(introduction == null) {
-                    pictureUploadRequest.setIntroduction("一张来自网络的图片");
-                }
-                if (tags == null) {
-                    pictureUploadRequest.setTags("[网络图片]");
-                }
-                log.warn("图片AI分析失败: {}  ", e.getMessage());
-            }
-        }
+//        // 调用AI分析图片内容
+//        String tags = pictureUploadRequest.getTags();
+//        String category = pictureUploadRequest.getCategory();
+//        String introduction = pictureUploadRequest.getIntroduction();
+//
+//        if(StringUtils.isAnyBlank(tags, category, introduction)) {
+//            try {
+//                ImageAnalysisResult aiResult = hunyuanImageAnalysis.analyzeImage(uploadPictureResult.getUrl());
+//                if(tags == null) {
+//                    StringBuilder tag_format = tagFormat(aiResult);
+//                    pictureUploadRequest.setTags(tag_format.toString());
+//                }
+//                if(category == null){
+//                    pictureUploadRequest.setCategory(aiResult.getCategory());
+//                }
+//                if(introduction == null){
+//                    pictureUploadRequest.setIntroduction(aiResult.getDescription());
+//                }
+//                log.info("图片AI分析成功: 分类= {}, 标签={}", aiResult.getCategory(), aiResult.getTags());
+//            } catch (Exception e) {
+//                // AI分析失败的处理
+//                if(category == null) {
+//                    pictureUploadRequest.setCategory("其他");
+//                }
+//                if(introduction == null) {
+//                    pictureUploadRequest.setIntroduction("一张来自网络的图片");
+//                }
+//                if (tags == null) {
+//                    pictureUploadRequest.setTags("[网络图片]");
+//                }
+//                log.warn("图片AI分析失败: {}  ", e.getMessage());
+//            }
+//        }
 
         // 构造要入库的图片信息
         Picture picture = new Picture();
@@ -235,6 +239,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             return picture;
         });
 
+        // 传进MQ
+        aiTaskService.publishTagging(picture.getId(), loginUser.getId());
         return PictureVO.objToVo(picture);
     }
 
@@ -741,7 +747,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         taskRequest.setInput(input);
         BeanUtil.copyProperties(createPictureOutPaintingTaskRequest, taskRequest);
         // 创建任务
-        return aliYunAiApi.createOutPaintingTask(taskRequest);
+        CreateOutPaintingTaskResponse response = aliYunAiApi.createOutPaintingTask(taskRequest);
+        String aliyunTaskId = response.getOutput().getTaskId();
+        aiTaskService.publishOutPainting(createPictureOutPaintingTaskRequest.getPictureId(), aliyunTaskId, loginUser.getId());
+        return response;
     }
 
 }

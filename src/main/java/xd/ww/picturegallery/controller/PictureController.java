@@ -2,6 +2,7 @@ package xd.ww.picturegallery.controller;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -28,14 +29,12 @@ import xd.ww.picturegallery.manager.auth.annotation.SaSpaceCheckPermission;
 import xd.ww.picturegallery.manager.auth.model.SpaceUserPermissionConstant;
 import xd.ww.picturegallery.manager.cache.CacheResult;
 import xd.ww.picturegallery.model.dto.picture.*;
-import xd.ww.picturegallery.model.entity.Picture;
-import xd.ww.picturegallery.model.entity.PictureTagCategory;
-import xd.ww.picturegallery.model.entity.Space;
-import xd.ww.picturegallery.model.entity.User;
+import xd.ww.picturegallery.model.entity.*;
 import xd.ww.picturegallery.model.enums.PictureReviewStatusEnum;
 import xd.ww.picturegallery.model.vo.PictureVO;
 import xd.ww.picturegallery.ratelimit.annotation.RateLimit;
 import xd.ww.picturegallery.ratelimit.model.RateLimitType;
+import xd.ww.picturegallery.service.AiTaskService;
 import xd.ww.picturegallery.service.PictureService;
 import xd.ww.picturegallery.service.SpaceService;
 import xd.ww.picturegallery.service.UserService;
@@ -67,6 +66,9 @@ public class PictureController {
 
     @Resource
     private CacheManager cacheManager;
+
+    @Resource
+    private AiTaskService aiTaskService;
 
     @Resource
     private AliYunAiApi aliYunAiApi;

@@ -114,4 +114,18 @@ create table if not exists space_user
     INDEX idx_userId (userId)                       -- 提升按用户查询的性能
 ) comment '空间用户关联' collate = utf8mb4_unicode_ci;
 
+create table if not exists ai_task (
+                               `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+                               `taskType` VARCHAR(32) NOT NULL COMMENT '任务类型: OUT_PAINTING / TAGGING',
+                               `status` INT DEFAULT 0 COMMENT '状态: 0-等待, 1-执行中, 2-成功, 3-失败',
+                               `pictureId` BIGINT NOT NULL COMMENT '关联图片ID',
+                               `inputParams` TEXT COMMENT '输入参数(JSON)',
+                               `outputData` TEXT COMMENT '输出结果(URL或标签JSON)',
+                               `outTaskId` VARCHAR(128) COMMENT '外部AI平台任务ID(如阿里云taskId)',
+                               `errorMessage` TEXT COMMENT '失败原因',
+                               `userId` BIGINT NOT NULL COMMENT '创建人ID',
+                               `createTime` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                               `updateTime` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 

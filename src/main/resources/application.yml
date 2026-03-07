@@ -8,6 +8,28 @@ server:
 
 
 spring:
+  rabbitmq:
+    # RabbitMQ 服务器地址
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    # 虚拟主机路径，默认是 /
+    virtual-host: /
+    # 监听器配置（消费者）
+    listener:
+      simple:
+        # 消费者并发数（根据服务器压力调整）
+        concurrency: 5
+        max-concurrency: 10
+        # 签收模式：auto(自动确认), manual(手动确认)
+        # 建议初期用 auto，如果追求极致可靠性用 manual
+        acknowledge-mode: auto
+        # 每次抓取的消息数量，防止消费者被淹没
+        prefetch: 1
+    # 消息发送确认（可选，保证生产者可靠性）
+    publisher-confirm-type: correlated
+    publisher-returns: true
   servlet:
     multipart:
       max-file-size: 10MB
@@ -41,6 +63,8 @@ mybatis-plus:
       logic-delete-field: isDelete # 全局逻辑删除的实体字段名
       logic-delete-value: 1 # 逻辑已删除值（默认为 1）
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
+
+
 
 # 接口文档配置
 knife4j:
